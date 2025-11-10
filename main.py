@@ -52,12 +52,26 @@ def initialize_system():
     print("Initializing recommendation system...")
     
     # Check if data exists, if not create it
-    data_dir = Path(__file__).parent / "data"
-    data_dir.mkdir(exist_ok=True)
+    # Try multiple possible paths for serverless environments
+    possible_paths = [
+        Path(__file__).parent / "data" / "assessments.json",
+        Path("data") / "assessments.json",
+        Path(".") / "data" / "assessments.json",
+    ]
     
-    assessments_file = data_dir / "assessments.json"
+    assessments_file = None
+    for path in possible_paths:
+        if path.exists():
+            assessments_file = path
+            print(f"Found assessments file at: {assessments_file}")
+            break
     
-    if not assessments_file.exists():
+    if assessments_file is None:
+        # Create data directory and file
+        data_dir = Path(__file__).parent / "data"
+        data_dir.mkdir(exist_ok=True)
+        assessments_file = data_dir / "assessments.json"
+        
         print("Assessment data not found. Creating sample data...")
         crawler = SHLCrawler()
         crawler.assessments = crawler.get_sample_assessments()
@@ -132,10 +146,29 @@ async def root():
         }
     }
 
-@app.get("/health", response_model=HealthResponse, tags=["Health"])
+@app.get("/health", tags=["Health"])
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy"}
+    global recommender, engine
+    
+    status = "healthy"
+    initialized = recommender is not None and engine is not None
+    
+    if not initialized:
+        status = "initializing"
+        # Try to initialize if not already done
+        try:
+            initialize_system()
+            initialized = recommender is not None
+        except Exception as e:
+            status = f"initialization_failed: {str(e)}"
+    
+    return {
+        "status": status,
+        "initialized": initialized,
+        "recommender_ready": recommender is not None,
+        "engine_ready": engine is not None
+    }
 
 @app.post("/recommend", response_model=RecommendationResponse, tags=["Recommendations"])
 async def get_recommendations(request: RecommendationRequest):
@@ -146,7 +179,21 @@ async def get_recommendations(request: RecommendationRequest):
     
     Returns 5-10 most relevant assessments
     """
-    global recommender
+    global recommender, engine
+    
+    # Lazy initialization for serverless environments (Vercel)
+    if recommender is None:
+        try:
+            print("Recommender not initialized, initializing now...")
+            initialize_system()
+        except Exception as e:
+            print(f"Error during lazy initialization: {e}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(
+                status_code=503, 
+                detail=f"Recommender initialization failed: {str(e)}"
+            )
     
     if recommender is None:
         raise HTTPException(status_code=503, detail="Recommender not initialized")
@@ -179,7 +226,17 @@ async def get_recommendations(request: RecommendationRequest):
 @app.get("/assessments", tags=["Assessments"])
 async def list_assessments(limit: int = 10):
     """List available assessments"""
-    global engine
+    global engine, recommender
+    
+    # Lazy initialization if needed
+    if engine is None or recommender is None:
+        try:
+            initialize_system()
+        except Exception as e:
+            raise HTTPException(
+                status_code=503, 
+                detail=f"System initialization failed: {str(e)}"
+            )
     
     if engine is None or not engine.assessments:
         raise HTTPException(status_code=503, detail="Assessments not loaded")
@@ -194,8 +251,15 @@ async def analyze_query(query: str):
     """Analyze query intent"""
     global recommender
     
+    # Lazy initialization if needed
     if recommender is None:
-        raise HTTPException(status_code=503, detail="Recommender not initialized")
+        try:
+            initialize_system()
+        except Exception as e:
+            raise HTTPException(
+                status_code=503, 
+                detail=f"Recommender initialization failed: {str(e)}"
+            )
     
     intent = recommender.analyze_query_intent(query)
     return {"query": query, "intent": intent}

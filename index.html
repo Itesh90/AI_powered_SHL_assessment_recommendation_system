@@ -160,7 +160,7 @@
         // Auto-detect API URL based on current domain
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:8000' 
-            : "https://ai-powered-shl-assessment-recommendation.onrender.com"; // Use same domain for Vercel deployment
+            : window.location.origin; // Use same domain for Vercel deployment (frontend and API on same domain)
 
         let currentResults = [];
 
@@ -204,7 +204,14 @@
                 
             } catch (error) {
                 console.error('Error:', error);
-                showError(error.message);
+                console.error('API_BASE_URL:', API_BASE_URL);
+                console.error('Full error:', error);
+                // Show more detailed error message
+                let errorMsg = error.message;
+                if (error.message === 'Failed to fetch') {
+                    errorMsg = 'Cannot connect to API. Please check if the backend is deployed and accessible.';
+                }
+                showError(errorMsg);
             } finally {
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('submitBtn').disabled = false;

@@ -90,7 +90,13 @@ def initialize_system():
 async def lifespan(app: FastAPI):
     """Lifespan event handler for startup and shutdown"""
     # Startup
-    initialize_system()
+    try:
+        initialize_system()
+    except Exception as e:
+        print(f"Error initializing system: {e}")
+        import traceback
+        traceback.print_exc()
+        # Continue anyway - API will return 503 for uninitialized state
     yield
     # Shutdown (if needed)
     pass

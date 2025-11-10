@@ -7,8 +7,42 @@ import numpy as np
 from typing import List, Dict, Any, Optional
 import json
 import os
-from sklearn.metrics.pairwise import cosine_similarity
 import pickle
+
+# Manual cosine similarity implementation to avoid scikit-learn dependency
+def cosine_similarity(vectors1, vectors2):
+    """
+    Compute cosine similarity between two sets of vectors.
+    Replaces sklearn.metrics.pairwise.cosine_similarity to reduce dependencies.
+    
+    Args:
+        vectors1: Array of shape (n_samples1, n_features) or (n_features,)
+        vectors2: Array of shape (n_samples2, n_features) or (n_features,)
+    
+    Returns:
+        Similarity scores
+    """
+    # Handle 1D input
+    if vectors1.ndim == 1:
+        vectors1 = vectors1.reshape(1, -1)
+    if vectors2.ndim == 1:
+        vectors2 = vectors2.reshape(1, -1)
+    
+    # Normalize vectors
+    norm1 = np.linalg.norm(vectors1, axis=1, keepdims=True)
+    norm2 = np.linalg.norm(vectors2, axis=1, keepdims=True)
+    
+    # Avoid division by zero
+    norm1 = np.where(norm1 == 0, 1, norm1)
+    norm2 = np.where(norm2 == 0, 1, norm2)
+    
+    vectors1_norm = vectors1 / norm1
+    vectors2_norm = vectors2 / norm2
+    
+    # Compute cosine similarity
+    similarity = np.dot(vectors1_norm, vectors2_norm.T)
+    
+    return similarity
 
 # For demo purposes, we'll use sentence-transformers if OpenAI API is not available
 try:

@@ -17,9 +17,6 @@ venv/
 env/
 ENV/
 *.log
-data/
-assessments.csv
-assessments.json
 predictions.csv
 submission.csv
 test_set.json
@@ -28,5 +25,4 @@ compute_recall.py
 Dockerfile
 docker-compose.yml
 start_backend.sh
-requirements.txt
 

@@ -51,7 +51,8 @@
 - **Status**: ✅ Complete
 - **File**: `submission.csv`
 - **Format**: `Query,Assessment_url`
-- **Rows**: 90 predictions (9 queries × 10 assessments each)
+- **Rows**: 100 predictions (10 queries × 10 assessments each)
+- **Source**: Processed from `Gen_AI Dataset.xlsx`
 - **Verified**: Correct format and structure
 
 ## 📁 Project Structure

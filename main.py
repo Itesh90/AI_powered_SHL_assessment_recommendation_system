@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
 import os
 import json
@@ -13,28 +13,14 @@ sys.path.append(str(Path(__file__).parent))
 from recommender import AssessmentRecommender
 from embeddings import EmbeddingEngine
 from crawler import SHLCrawler
-
-# Initialize FastAPI app
-app = FastAPI(
-    title="SHL Assessment Recommendation API",
-    description="AI-powered assessment recommendation system",
-    version="1.0.0"
-)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for demo
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+from contextlib import asynccontextmanager
 
 # Request/Response models
 class RecommendationRequest(BaseModel):
     query: str = Field(..., description="Job description text or URL")
     
-    @validator('query')
+    @field_validator('query')
+    @classmethod
     def validate_query(cls, v):
         if not v or len(v.strip()) < 3:
             raise ValueError("Query must be at least 3 characters long")
@@ -99,11 +85,32 @@ def initialize_system():
     print("System initialized successfully!")
     print(f"Loaded {len(assessments)} assessments")
 
-# Initialize on startup
-@app.on_event("startup")
-async def startup_event():
-    """Initialize system on startup"""
+# Lifespan event handler for startup and shutdown
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup and shutdown"""
+    # Startup
     initialize_system()
+    yield
+    # Shutdown (if needed)
+    pass
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="SHL Assessment Recommendation API",
+    description="AI-powered assessment recommendation system",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for demo
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # API Endpoints
 @app.get("/", tags=["Root"])
@@ -202,10 +209,11 @@ if __name__ == "__main__":
     import uvicorn
     
     # Run the application
+    # Use PORT environment variable (required by Render) or default to 8000
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(
-        "main:app",
+        app,
         host="0.0.0.0",
         port=port,
-        reload=True
+        reload=False  # Disable reload in production
     )

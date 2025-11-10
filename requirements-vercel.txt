@@ -1,5 +1,8 @@
+# Lightweight requirements for Vercel deployment
+# Removes heavy ML dependencies (PyTorch, CUDA libraries) to avoid OOM errors
+# Uses OpenAI API for embeddings (recommended for production)
+
 setuptools>=68.0.0
-cython>=3.0.0
 fastapi>=0.115.0
 uvicorn[standard]==0.24.0
 pydantic>=2.9.0
@@ -14,4 +17,5 @@ pandas>=2.2.0
 
 # Note: sentence-transformers removed to reduce build size (~2GB+ savings)
 # The code will use OpenAI API (if OPENAI_API_KEY is set) or fallback to random embeddings
-# To use sentence-transformers locally, install separately: pip install sentence-transformers
+# For local development with sentence-transformers, use requirements.txt
+

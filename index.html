@@ -157,9 +157,10 @@
 
     <script>
         // API Configuration
+        // Auto-detect API URL based on current domain
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:8000' 
-            : 'https://ai-powered-shl-assessment-recommendation.onrender.com'; // Update with your deployed API URL
+            : window.location.origin; // Use same domain for Vercel deployment
 
         let currentResults = [];
 
